@@ -1,0 +1,270 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  VIEWER
+}
+
+enum ProjectStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  ON_HOLD
+}
+
+enum ExpenseCategory {
+  MATERIALS
+  TRANSPORT
+  FUEL
+  EQUIPMENT
+  FOOD
+  ACCOMMODATION
+  OTHER
+}
+
+enum GeneralExpenseCategory {
+  RENT
+  ELECTRICITY
+  INTERNET
+  ADMIN_SALARIES
+  MAINTENANCE
+  VEHICLES
+  MARKETING
+  INSURANCE
+  OTHER
+}
+
+enum AttendanceStatus {
+  PRESENT
+  SICK
+  PAID_LEAVE
+  UNEXCUSED
+}
+
+enum EquipmentType {
+  TRUCK
+  CRANE
+  EXCAVATOR
+  WELDER
+  GENERATOR
+  SCAFFOLDING
+  OTHER
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          Role      @default(VIEWER)
+  avatar        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  projects      Project[] @relation("CreatedBy")
+  activityLogs  ActivityLog[]
+}
+
+model Project {
+  id               String        @id @default(cuid())
+  name             String
+  client           String
+  location         String
+  description      String?
+  startDate        DateTime
+  endDate          DateTime?
+  status           ProjectStatus @default(PLANNED)
+  progress         Int           @default(0)
+  contractValue    Float         @default(0)
+  notes            String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  createdById      String
+  createdBy        User          @relation("CreatedBy", fields: [createdById], references: [id])
+  expenses         Expense[]
+  workerAssignments WorkerAssignment[]
+  documents        Document[]
+  activityLogs     ActivityLog[]
+  attendance       Attendance[]
+  equipmentAssignments EquipmentAssignment[]
+  payments         ProjectPayment[]
+  milestones       ProjectMilestone[]
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  projectId   String
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  category    ExpenseCategory
+  description String
+  amount      Float
+  date        DateTime        @default(now())
+  receipt     String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model GeneralExpense {
+  id          String                 @id @default(cuid())
+  category    GeneralExpenseCategory
+  description String
+  amount      Float
+  month       Int
+  year        Int
+  recurring   Boolean                @default(false)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+}
+
+model Worker {
+  id           String            @id @default(cuid())
+  name         String
+  position     String
+  phone        String?
+  email        String?
+  dailyRate    Float
+  active       Boolean           @default(true)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  assignments  WorkerAssignment[]
+  attendance   Attendance[]
+}
+
+model WorkerAssignment {
+  id          String   @id @default(cuid())
+  workerId    String
+  worker      Worker   @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  daysWorked  Float    @default(0)
+  startDate   DateTime
+  endDate     DateTime?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([workerId, projectId])
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  type        String
+  url         String
+  size        Int
+  createdAt   DateTime @default(now())
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  action      String
+  description String
+  createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  type      String   @default("info")
+  read      Boolean  @default(false)
+  userId    String
+  createdAt DateTime @default(now())
+}
+
+model Attendance {
+  id        String           @id @default(cuid())
+  workerId  String
+  worker    Worker           @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  date      DateTime
+  status    AttendanceStatus @default(PRESENT)
+  notes     String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([workerId, date])
+  @@index([date])
+}
+
+model Equipment {
+  id          String                @id @default(cuid())
+  name        String
+  type        EquipmentType         @default(OTHER)
+  dailyRate   Float                 @default(0)
+  description String?
+  active      Boolean               @default(true)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  assignments EquipmentAssignment[]
+}
+
+model EquipmentAssignment {
+  id          String    @id @default(cuid())
+  equipmentId String
+  equipment   Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  startDate   DateTime
+  endDate     DateTime?
+  daysUsed    Float     @default(0)
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([projectId])
+  @@index([equipmentId])
+}
+
+model ProjectPayment {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  amount      Float
+  date        DateTime
+  description String?
+  receiptUrl  String?
+  receiptName String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([date])
+}
+
+model CompanySettings {
+  id                  String   @id @default(cuid())
+  totalRevenue        Float    @default(0)
+  totalRevenueNote    String?
+  updatedAt           DateTime @updatedAt
+  createdAt           DateTime @default(now())
+}
+
+model ProjectMilestone {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([projectId])
+}

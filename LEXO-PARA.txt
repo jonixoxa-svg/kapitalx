@@ -1,0 +1,83 @@
+============================================================
+  KapitalX - Si ta hapesh aplikacionin tend
+============================================================
+
+Te ke instaluar Node.js dhe PostgreSQL - shume mire!
+Tani na duhen vetem 4 hapa te shkurter.
+
+
+------------------------------------------------------------
+  HAPI 1: KRIJO DATABAZEN "kapitalx" NE POSTGRES
+------------------------------------------------------------
+
+1. Hap "pgAdmin 4" (kerkoje ne Start menu)
+2. Ne te majte, klik dy here mbi "Servers" -> "PostgreSQL"
+3. Do te te kerkoje fjalekalimin e Postgres-it
+   (ate qe vendose gjate instalimit)
+4. Klik i djathte mbi "Databases" -> "Create" -> "Database..."
+5. Ne "Database" shkruaj:   kapitalx
+6. Klik "Save"
+
+
+------------------------------------------------------------
+  HAPI 2: VENDOSE FJALEKALIMIN NE .env
+------------------------------------------------------------
+
+1. Ne dosjen "kapitalx", gjej skedarin ".env"
+2. Klik i djathte -> "Open with" -> "Notepad"
+3. Do te shohesh rreshtin:    DATABASE_URL=""
+4. NDRYSHOJE ne (zevendeso XXXX me fjalekalimin tend te Postgres-it):
+
+   DATABASE_URL="postgresql://postgres:XXXX@localhost:5432/kapitalx"
+
+   Shembull:
+   DATABASE_URL="postgresql://postgres:admin123@localhost:5432/kapitalx"
+
+5. Ruaj me Ctrl+S dhe mbylle.
+
+
+------------------------------------------------------------
+  HAPI 3: INSTALO PAKETAT
+------------------------------------------------------------
+
+Kliko dy here mbi:   1-INSTALO.bat
+(Prit 2-5 minuta derisa te mbaroje)
+
+
+------------------------------------------------------------
+  HAPI 4: PERGATIT DATABAZEN
+------------------------------------------------------------
+
+Kliko dy here mbi:   2-DATABAZA.bat
+(Krijon tabelat dhe te dhenat demo)
+
+
+------------------------------------------------------------
+  HAPI 5: HAPE APLIKACIONIN
+------------------------------------------------------------
+
+Kliko dy here mbi:   3-HAPE.bat
+Browseri do hapet vete pas pak sekondash.
+
+Login:
+  Email:        admin@kapitalx.com
+  Fjalekalimi:  admin123
+
+
+------------------------------------------------------------
+  NESE KE PROBLEME
+------------------------------------------------------------
+
+- Nese 1-INSTALO.bat thote "Node.js nuk eshte instaluar":
+  Rinis kompjuterin (PATH-i mund te mos jete azhornuar akoma).
+
+- Nese 2-DATABAZA.bat thote "nuk u lidha dot me databazen":
+  - Hap perseri .env dhe kontrollo qe fjalekalimi eshte i sakte
+  - Sigurohu qe databaza "kapitalx" eshte krijuar ne pgAdmin
+  - Sigurohu qe sherbimi i PostgreSQL eshte i ndezur
+    (kerko "Services" ne Start menu, pastaj gjej "postgresql-x64"
+    dhe sigurohu qe eshte ne gjendjen "Running")
+
+- Pas çdo problemi, kthehu te chat-i dhe me trego cilin gabim.
+
+Suksese!
