@@ -16,7 +16,7 @@ git add -A
 
 echo.
 echo  --- git commit ---
-git commit -m "Fix: disable ESLint and TS errors during build"
+git commit -m "Remove demo credentials box from login page"
 if errorlevel 1 (
     echo  Nuk ka ndryshime per commit ose gabim
 )
