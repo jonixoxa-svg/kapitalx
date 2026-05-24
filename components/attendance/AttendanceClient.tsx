@@ -52,6 +52,8 @@ export default function AttendanceClient({
   const [history, setHistory] = useState<AttendanceRecord[]>([]);
   const [saving, setSaving] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [periodType, setPeriodType] = useState<"30days" | "h1" | "h2">("30days");
+  const [periodYear, setPeriodYear] = useState(new Date().getFullYear());
 
   const canEdit = userRole !== "VIEWER";
   const activeWorkers = workers.filter((w) => w.active);
@@ -74,16 +76,25 @@ export default function AttendanceClient({
     };
   }, [selectedDate]);
 
-  // Fetch last 30 days for the bottom summary
+  // Fetch records for the selected summary period
   useEffect(() => {
-    const to = todayISO();
-    const fromDate = new Date();
-    fromDate.setDate(fromDate.getDate() - 30);
-    const from = fromDate.toISOString().slice(0, 10);
+    let from = "", to = "";
+    if (periodType === "30days") {
+      to = todayISO();
+      const fromDate = new Date();
+      fromDate.setDate(fromDate.getDate() - 30);
+      from = fromDate.toISOString().slice(0, 10);
+    } else if (periodType === "h1") {
+      from = `${periodYear}-01-01`;
+      to = `${periodYear}-06-30`;
+    } else {
+      from = `${periodYear}-07-01`;
+      to = `${periodYear}-12-31`;
+    }
     fetch(`/api/attendance?from=${from}&to=${to}`)
       .then((r) => r.json())
       .then((data) => setHistory(data));
-  }, [records]);
+  }, [records, periodType, periodYear]);
 
   async function setStatus(workerId: string, status: AttendanceRecord["status"], projectId?: string | null) {
     if (!canEdit) return;
@@ -225,11 +236,57 @@ export default function AttendanceClient({
         )}
       </div>
 
-      {/* Last 30 days summary */}
+      {/* Summary section with period switcher */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="p-5 border-b border-border">
-          <h2 className="text-lg font-bold text-foreground">Përmbledhje 30 ditët e fundit</h2>
-          <p className="text-xs text-muted-foreground mt-1">
+        <div className="p-5 border-b border-border space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <h2 className="text-lg font-bold text-foreground">
+              Përmbledhje {periodType === "30days" ? "30 ditët e fundit" : periodType === "h1" ? `Janar-Qershor ${periodYear}` : `Korrik-Dhjetor ${periodYear}`}
+            </h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex bg-secondary/30 rounded-lg p-1">
+                <button
+                  onClick={() => setPeriodType("30days")}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
+                    periodType === "30days" ? "bg-orange-500/20 text-orange-400" : "text-muted-foreground"
+                  )}
+                >
+                  30 dit&euml;
+                </button>
+                <button
+                  onClick={() => setPeriodType("h1")}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
+                    periodType === "h1" ? "bg-orange-500/20 text-orange-400" : "text-muted-foreground"
+                  )}
+                >
+                  6-mujori i parë
+                </button>
+                <button
+                  onClick={() => setPeriodType("h2")}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
+                    periodType === "h2" ? "bg-orange-500/20 text-orange-400" : "text-muted-foreground"
+                  )}
+                >
+                  6-mujori i dytë
+                </button>
+              </div>
+              {periodType !== "30days" && (
+                <select
+                  value={periodYear}
+                  onChange={(e) => setPeriodYear(parseInt(e.target.value))}
+                  className="bg-secondary border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-orange-500"
+                >
+                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
             Pagohen vetëm ditët <span className="text-green-400">Prezent</span> dhe <span className="text-blue-400">Leje me pagesë</span>.
           </p>
         </div>
