@@ -29,7 +29,7 @@ export async function PUT(
 
   const { id } = await params;
   const body = await req.json();
-  const { title, description, completed, order } = body;
+  const { title, description, completed, order, startDate, endDate } = body;
 
   const existing = await prisma.projectMilestone.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Nuk u gjet" }, { status: 404 });
@@ -42,6 +42,8 @@ export async function PUT(
     data.completed = completed;
     data.completedAt = completed ? new Date() : null;
   }
+  if (startDate !== undefined) data.startDate = startDate ? new Date(startDate) : null;
+  if (endDate !== undefined) data.endDate = endDate ? new Date(endDate) : null;
 
   const milestone = await prisma.projectMilestone.update({
     where: { id },

@@ -17,6 +17,9 @@ import {
   Building2,
   CalendarCheck,
   Truck,
+  Hammer,
+  Package,
+  FileBarChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +55,16 @@ const navItems = [
     icon: Truck,
   },
   {
+    label: "Prodhimi",
+    href: "/production",
+    icon: Hammer,
+  },
+  {
+    label: "Stoku",
+    href: "/stock",
+    icon: Package,
+  },
+  {
     label: "Financiare",
     href: "/financial",
     icon: BarChart3,
@@ -60,6 +73,11 @@ const navItems = [
     label: "Kalendari",
     href: "/calendar",
     icon: Calendar,
+  },
+  {
+    label: "Raporte",
+    href: "/reports",
+    icon: FileBarChart,
   },
 ];
 

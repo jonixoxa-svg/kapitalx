@@ -69,6 +69,9 @@ export function getExpenseCategoryLabel(category: string): string {
 
 export function getGeneralExpenseCategoryLabel(category: string): string {
   const labels: Record<string, string> = {
+    MATERIALS: "Materiale",
+    TRANSPORT: "Transport",
+    SALARIES: "Paga",
     RENT: "Qiraja",
     ELECTRICITY: "Rryma",
     INTERNET: "Internet",

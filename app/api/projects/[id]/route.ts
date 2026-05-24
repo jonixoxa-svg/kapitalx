@@ -43,13 +43,13 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
       ...(name && { name }),
       ...(client && { client }),
       ...(location && { location }),
-      description,
+      ...(description !== undefined && { description }),
       ...(startDate && { startDate: new Date(startDate) }),
-      endDate: endDate ? new Date(endDate) : null,
+      ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
       ...(status && { status }),
       ...(contractValue !== undefined && { contractValue: parseFloat(contractValue) }),
       ...(progress !== undefined && { progress: parseInt(progress) }),
-      notes,
+      ...(notes !== undefined && { notes }),
     },
   });
 
