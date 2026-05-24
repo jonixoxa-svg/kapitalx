@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   ChevronLeft, ChevronRight, Calendar as CalendarIcon, Users, Hammer, FolderKanban,
-  X, Save, Edit,
+  X, Save, Edit, StickyNote, Trash2,
 } from "lucide-react";
 import { cn, formatDate, getStatusColor, getStatusLabel } from "@/lib/utils";
 
@@ -87,7 +87,31 @@ export default function ProjectCalendar({ projects, productions, workers, userRo
   const [view, setView] = useState<ViewType>("month");
   const [refDate, setRefDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [notes, setNotes] = useState<Record<string, { id: string; text: string }>>({});
   const canEdit = userRole !== "VIEWER";
+
+  // Load notes for the visible period
+  useEffect(() => {
+    const from = refDate.toISOString().slice(0, 10);
+    const toEnd = addMonths(refDate, view === "6month" ? 6 : view === "month" ? 1 : 1);
+    const to = toEnd.toISOString().slice(0, 10);
+    fetch(`/api/calendar-notes?from=${from}&to=${to}`)
+      .then((r) => r.json())
+      .then((data: any[]) => {
+        const map: Record<string, { id: string; text: string }> = {};
+        for (const n of data) {
+          const key = new Date(n.date).toISOString().slice(0, 10);
+          map[key] = { id: n.id, text: n.text };
+        }
+        setNotes(map);
+      })
+      .catch(() => {});
+  }, [refDate, view, selectedDay]);
+
+  function dayKey(d: Date) {
+    return d.toISOString().slice(0, 10);
+  }
 
   // Build events
   const events: CalendarEvent[] = useMemo(() => {
@@ -218,8 +242,8 @@ export default function ProjectCalendar({ projects, productions, workers, userRo
       </div>
 
       {/* Calendar */}
-      {view === "week" && <WeekView start={period.start} events={visibleEvents} onSelect={setSelectedEvent} />}
-      {view === "month" && <MonthView refDate={refDate} events={visibleEvents} onSelect={setSelectedEvent} />}
+      {view === "week" && <WeekView start={period.start} events={visibleEvents} notes={notes} onSelectEvent={setSelectedEvent} onSelectDay={setSelectedDay} />}
+      {view === "month" && <MonthView refDate={refDate} events={visibleEvents} notes={notes} onSelectEvent={setSelectedEvent} onSelectDay={setSelectedDay} />}
       {view === "6month" && <SixMonthView refDate={refDate} events={visibleEvents} onSelect={setSelectedEvent} />}
 
       {selectedEvent && (
@@ -231,51 +255,91 @@ export default function ProjectCalendar({ projects, productions, workers, userRo
           onSaved={() => { setSelectedEvent(null); router.refresh(); }}
         />
       )}
+
+      {selectedDay && (
+        <DayDialog
+          day={selectedDay}
+          events={visibleEvents.filter((e) => selectedDay >= e.start && selectedDay <= e.end)}
+          initialNote={notes[dayKey(selectedDay)]?.text || ""}
+          canEdit={canEdit}
+          onClose={() => setSelectedDay(null)}
+          onEventClick={(e) => { setSelectedDay(null); setSelectedEvent(e); }}
+        />
+      )}
     </div>
   );
 }
 
 // ====== WEEK VIEW ======
-function WeekView({ start, events, onSelect }: { start: Date; events: CalendarEvent[]; onSelect: (e: CalendarEvent) => void }) {
+function WeekView({ start, events, notes, onSelectEvent, onSelectDay }: {
+  start: Date;
+  events: CalendarEvent[];
+  notes: Record<string, { id: string; text: string }>;
+  onSelectEvent: (e: CalendarEvent) => void;
+  onSelectDay: (d: Date) => void;
+}) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
   const today = new Date();
 
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
       <div className="grid grid-cols-7">
-        {days.map((d) => (
-          <div key={d.toISOString()} className={cn(
-            "border-r border-b border-border last:border-r-0 p-2 min-h-[200px]",
-            sameDay(d, today) && "bg-orange-500/5"
-          )}>
-            <div className="mb-2">
-              <div className="text-[10px] text-muted-foreground uppercase">{d.toLocaleDateString("sq-AL", { weekday: "short" })}</div>
-              <div className={cn(
-                "text-sm font-semibold",
-                sameDay(d, today) ? "text-orange-400" : "text-foreground"
-              )}>{d.getDate()}</div>
+        {days.map((d) => {
+          const key = d.toISOString().slice(0, 10);
+          const note = notes[key];
+          return (
+            <div
+              key={d.toISOString()}
+              onClick={() => onSelectDay(d)}
+              className={cn(
+                "border-r border-b border-border last:border-r-0 p-2 min-h-[200px] cursor-pointer hover:bg-secondary/30 transition-colors relative",
+                sameDay(d, today) && "bg-orange-500/5"
+              )}
+              title="Kliko per ta zmadhuar dhe shtuar shenime"
+            >
+              <div className="mb-2 flex items-center justify-between">
+                <div>
+                  <div className="text-[10px] text-muted-foreground uppercase">{d.toLocaleDateString("sq-AL", { weekday: "short" })}</div>
+                  <div className={cn(
+                    "text-sm font-semibold",
+                    sameDay(d, today) ? "text-orange-400" : "text-foreground"
+                  )}>{d.getDate()}</div>
+                </div>
+                {note && <StickyNote className="w-3.5 h-3.5 text-yellow-400" />}
+              </div>
+              <div className="space-y-1">
+                {events.filter((e) => d >= e.start && d <= e.end).map((e) => (
+                  <button
+                    key={e.id + d.toISOString()}
+                    onClick={(ev) => { ev.stopPropagation(); onSelectEvent(e); }}
+                    className={cn("w-full text-left text-[10px] px-1.5 py-1 rounded border truncate", e.color)}
+                    title={e.title}
+                  >
+                    {e.title}
+                  </button>
+                ))}
+                {note && (
+                  <div className="text-[10px] text-yellow-300 bg-yellow-500/10 border border-yellow-500/30 rounded px-1.5 py-1 line-clamp-2">
+                    {note.text}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="space-y-1">
-              {events.filter((e) => d >= e.start && d <= e.end).map((e) => (
-                <button
-                  key={e.id + d.toISOString()}
-                  onClick={() => onSelect(e)}
-                  className={cn("w-full text-left text-[10px] px-1.5 py-1 rounded border truncate", e.color)}
-                  title={e.title}
-                >
-                  {e.title}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 }
 
 // ====== MONTH VIEW ======
-function MonthView({ refDate, events, onSelect }: { refDate: Date; events: CalendarEvent[]; onSelect: (e: CalendarEvent) => void }) {
+function MonthView({ refDate, events, notes, onSelectEvent, onSelectDay }: {
+  refDate: Date;
+  events: CalendarEvent[];
+  notes: Record<string, { id: string; text: string }>;
+  onSelectEvent: (e: CalendarEvent) => void;
+  onSelectDay: (d: Date) => void;
+}) {
   const monthStart = startOfMonth(refDate);
   const monthEnd = endOfMonth(refDate);
   const gridStart = startOfWeek(monthStart);
@@ -295,32 +359,44 @@ function MonthView({ refDate, events, onSelect }: { refDate: Date; events: Calen
         {cells.map((d) => {
           const inMonth = d.getMonth() === refDate.getMonth();
           const dayEvents = events.filter((e) => d >= e.start && d <= e.end);
+          const key = d.toISOString().slice(0, 10);
+          const note = notes[key];
           return (
             <div
               key={d.toISOString()}
+              onClick={() => onSelectDay(d)}
               className={cn(
-                "border-r border-b border-border p-1.5 min-h-[110px]",
+                "border-r border-b border-border p-1.5 min-h-[110px] cursor-pointer hover:bg-secondary/30 transition-colors relative",
                 !inMonth && "bg-secondary/20",
                 sameDay(d, today) && "bg-orange-500/5"
               )}
+              title="Kliko per ta zmadhuar dhe shtuar shenime"
             >
-              <div className={cn(
-                "text-xs font-medium mb-1",
-                sameDay(d, today) ? "text-orange-400 font-bold" : inMonth ? "text-foreground" : "text-muted-foreground/40"
-              )}>{d.getDate()}</div>
+              <div className="flex items-center justify-between mb-1">
+                <div className={cn(
+                  "text-xs font-medium",
+                  sameDay(d, today) ? "text-orange-400 font-bold" : inMonth ? "text-foreground" : "text-muted-foreground/40"
+                )}>{d.getDate()}</div>
+                {note && <StickyNote className="w-3 h-3 text-yellow-400" />}
+              </div>
               <div className="space-y-0.5">
-                {dayEvents.slice(0, 3).map((e) => (
+                {dayEvents.slice(0, 2).map((e) => (
                   <button
                     key={e.id + d.toISOString()}
-                    onClick={() => onSelect(e)}
+                    onClick={(ev) => { ev.stopPropagation(); onSelectEvent(e); }}
                     className={cn("w-full text-left text-[9px] px-1 py-0.5 rounded border truncate", e.color)}
                     title={e.title}
                   >
                     {e.title}
                   </button>
                 ))}
-                {dayEvents.length > 3 && (
-                  <div className="text-[9px] text-muted-foreground px-1">+{dayEvents.length - 3} të tjera</div>
+                {dayEvents.length > 2 && (
+                  <div className="text-[9px] text-muted-foreground px-1">+{dayEvents.length - 2} të tjera</div>
+                )}
+                {note && (
+                  <div className="text-[9px] text-yellow-300 bg-yellow-500/10 border border-yellow-500/30 rounded px-1 py-0.5 line-clamp-2">
+                    {note.text}
+                  </div>
                 )}
               </div>
             </div>
@@ -365,6 +441,150 @@ function SixMonthView({ refDate, events, onSelect }: { refDate: Date; events: Ca
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ====== DAY DIALOG (Expanded day view with notes) ======
+function DayDialog({ day, events, initialNote, canEdit, onClose, onEventClick }: {
+  day: Date;
+  events: CalendarEvent[];
+  initialNote: string;
+  canEdit: boolean;
+  onClose: () => void;
+  onEventClick: (e: CalendarEvent) => void;
+}) {
+  const [note, setNote] = useState(initialNote);
+  const [saving, setSaving] = useState(false);
+  const today = new Date();
+  const isToday = sameDay(day, today);
+
+  async function saveNote() {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/calendar-notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: day.toISOString().slice(0, 10), text: note }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(note.trim() ? "Shenimi u ruajt" : "Shenimi u fshi");
+      onClose();
+    } catch {
+      toast.error("Gabim gjate ruajtjes");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <div
+        className="bg-card border border-border rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header - big and prominent */}
+        <div className="flex items-start justify-between mb-5 pb-4 border-b border-border">
+          <div>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">
+              {day.toLocaleDateString("sq-AL", { weekday: "long" })}
+            </div>
+            <div className={cn(
+              "text-3xl font-bold mt-1",
+              isToday ? "text-orange-400" : "text-foreground"
+            )}>
+              {day.getDate()} {day.toLocaleDateString("sq-AL", { month: "long" })} {day.getFullYear()}
+              {isToday && <span className="ml-2 text-xs bg-orange-500/20 text-orange-400 px-2 py-1 rounded-full">Sot</span>}
+            </div>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground p-2">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Events */}
+        <div className="mb-5">
+          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+            <CalendarIcon className="w-4 h-4 text-orange-400" />
+            Çfar&euml; ka k&euml;t&euml; dit&euml;
+          </h3>
+          {events.length === 0 ? (
+            <p className="text-sm text-muted-foreground italic px-3 py-4 bg-secondary/20 rounded-lg text-center">
+              Asnj&euml; event i regjistruar p&euml;r k&euml;t&euml; dit&euml;
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {events.map((e) => (
+                <button
+                  key={e.id}
+                  onClick={() => onEventClick(e)}
+                  className={cn(
+                    "w-full text-left px-4 py-3 rounded-xl border transition-all hover:scale-[1.01]",
+                    e.color
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-0.5">
+                      {e.type === "project" && <FolderKanban className="w-5 h-5" />}
+                      {e.type === "milestone" && <CalendarIcon className="w-5 h-5" />}
+                      {e.type === "production" && <Hammer className="w-5 h-5" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-sm">{e.title}</div>
+                      {e.subtitle && <div className="text-xs opacity-80 mt-0.5">{e.subtitle}</div>}
+                      <div className="text-[10px] opacity-60 mt-1">
+                        {fmtShort(e.start)}{!sameDay(e.start, e.end) ? ` → ${fmtShort(e.end)}` : ""}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Notes - big editable area */}
+        <div>
+          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+            <StickyNote className="w-4 h-4 text-yellow-400" />
+            Sh&euml;nime p&euml;r k&euml;t&euml; dit&euml;
+          </h3>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            disabled={!canEdit}
+            rows={8}
+            placeholder={canEdit ? "Shkruaj çfardo: detyra, takime, kujtues, ngjarje..." : "Vetem shikim"}
+            className="w-full bg-secondary/40 border border-border focus:border-yellow-500/40 focus:outline-none rounded-xl px-4 py-3 text-base text-foreground placeholder:text-muted-foreground resize-none"
+            style={{ lineHeight: "1.6" }}
+          />
+          {canEdit && (
+            <div className="flex items-center gap-2 mt-3">
+              <button
+                onClick={saveNote}
+                disabled={saving}
+                className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white font-medium rounded-lg text-sm"
+              >
+                {saving ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                {saving ? "Po ruhet..." : "Ruaj shenimin"}
+              </button>
+              {initialNote && (
+                <button
+                  onClick={() => { setNote(""); }}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-medium rounded-lg text-sm"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Fshi
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

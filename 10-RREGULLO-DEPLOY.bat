@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title KapitalX - Rregullime + Evidenca 6 mujore
+title KapitalX - Rregullime + Kalendar me shenime
 color 0E
 cd /d "%~dp0"
 
@@ -8,11 +8,12 @@ echo.
 echo ============================================================
 echo   - Rregullim: ADMIN_SALARIES enum
 echo   - Evidenca: 6-mujori i pare dhe i dyte
+echo   - Kalendari: kliko diten per zmadhim + shenime te editueshme
 echo ============================================================
 echo.
 
 git add -A
-git commit -m "Fix: restore ADMIN_SALARIES; add: half-year attendance views"
+git commit -m "Fix: enum; Add: half-year attendance, calendar day notes w/ zoom modal"
 if errorlevel 1 echo  Nuk ka ndryshime
 
 echo.
@@ -30,7 +31,9 @@ echo.
 echo ============================================================
 echo  GATI! Render do ribindoje. Prit 5-10 min.
 echo  Pas rebuild:
-echo   - Pajisjet ne projekt = auto-shpenzim per projekt
-echo   - Evidenca ka tani: 30 dite / Janar-Qershor / Korrik-Dhjetor
+echo   - Kalendari: kliko cdo dite per modal te madh
+echo                shkruaj cfardo shenimi, ruaj/fshi
+echo   - Pajisjet ne projekt = auto-shpenzim
+echo   - Evidenca: 30 dite / Janar-Qer / Korrik-Dhj
 echo ============================================================
 pause
