@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
   const amount = parseFloat(formData.get("amount") as string);
   const date = formData.get("date") as string;
   const description = (formData.get("description") as string) || null;
+  const method = (formData.get("method") as string) || "CASH";
   const file = formData.get("file") as File | null;
 
   if (!projectId || !amount || !date) {
@@ -94,6 +95,7 @@ export async function POST(req: NextRequest) {
       amount,
       date: new Date(date),
       description,
+      method: method as any,
       receiptUrl,
       receiptName,
     },

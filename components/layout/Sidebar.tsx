@@ -20,6 +20,7 @@ import {
   Hammer,
   Package,
   FileBarChart,
+  Zap as Lightning,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +39,11 @@ const navItems = [
     label: "Shpenzimet",
     href: "/expenses",
     icon: Wallet,
+  },
+  {
+    label: "Hyrje e shpejtë",
+    href: "/quick-expense",
+    icon: Lightning,
   },
   {
     label: "Punëtorët",

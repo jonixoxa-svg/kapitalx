@@ -57,6 +57,13 @@ enum StockMovementType {
   ADJUSTED
 }
 
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CHECK
+  OTHER
+}
+
 enum AttendanceStatus {
   PRESENT
   SICK
@@ -116,16 +123,17 @@ model Project {
 }
 
 model Expense {
-  id          String          @id @default(cuid())
-  projectId   String
-  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  category    ExpenseCategory
-  description String
-  amount      Float
-  date        DateTime        @default(now())
-  receipt     String?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id                       String          @id @default(cuid())
+  projectId                String
+  project                  Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  category                 ExpenseCategory
+  description              String
+  amount                   Float
+  date                     DateTime        @default(now())
+  receipt                  String?
+  sourceEquipmentAssignmentId String?      @unique
+  createdAt                DateTime        @default(now())
+  updatedAt                DateTime        @updatedAt
 }
 
 model GeneralExpense {
@@ -141,6 +149,7 @@ model GeneralExpense {
   receiptUrl  String?
   receiptName String?
   date        DateTime               @default(now())
+  submittedBy String?                // P.sh. "Valdet", "Tahir", "Admin"
   createdAt   DateTime               @default(now())
   updatedAt   DateTime               @updatedAt
 
@@ -256,16 +265,17 @@ model EquipmentAssignment {
 }
 
 model ProjectPayment {
-  id          String   @id @default(cuid())
+  id          String        @id @default(cuid())
   projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   amount      Float
   date        DateTime
   description String?
+  method      PaymentMethod @default(CASH)
   receiptUrl  String?
   receiptName String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   @@index([projectId])
   @@index([date])

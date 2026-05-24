@@ -34,6 +34,7 @@ export default function PaymentsSection({
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState("");
+  const [method, setMethod] = useState("CASH");
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [viewingReceipt, setViewingReceipt] = useState<Payment | null>(null);
@@ -63,6 +64,7 @@ export default function PaymentsSection({
       fd.append("projectId", projectId);
       fd.append("amount", amount);
       fd.append("date", date);
+      fd.append("method", method);
       if (description) fd.append("description", description);
       if (file) fd.append("file", file);
 
@@ -232,6 +234,19 @@ export default function PaymentsSection({
                   onChange={(e) => setDate(e.target.value)}
                   className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-orange-500"
                 />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Metoda e pagesës</label>
+                <select
+                  value={method}
+                  onChange={(e) => setMethod(e.target.value)}
+                  className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-orange-500"
+                >
+                  <option value="CASH">Pagesë në dorë</option>
+                  <option value="BANK_TRANSFER">Transfer bankar</option>
+                  <option value="CHECK">Çek</option>
+                  <option value="OTHER">Tjetër</option>
+                </select>
               </div>
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1">Përshkrim (opsional)</label>
