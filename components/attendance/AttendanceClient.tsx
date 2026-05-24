@@ -52,8 +52,9 @@ export default function AttendanceClient({
   const [history, setHistory] = useState<AttendanceRecord[]>([]);
   const [saving, setSaving] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [periodType, setPeriodType] = useState<"30days" | "h1" | "h2">("30days");
+  const [periodType, setPeriodType] = useState<"month" | "h1" | "h2">("month");
   const [periodYear, setPeriodYear] = useState(new Date().getFullYear());
+  const [periodMonth, setPeriodMonth] = useState(new Date().getMonth() + 1); // 1-12
 
   const canEdit = userRole !== "VIEWER";
   const activeWorkers = workers.filter((w) => w.active);
@@ -79,11 +80,11 @@ export default function AttendanceClient({
   // Fetch records for the selected summary period
   useEffect(() => {
     let from = "", to = "";
-    if (periodType === "30days") {
-      to = todayISO();
-      const fromDate = new Date();
-      fromDate.setDate(fromDate.getDate() - 30);
-      from = fromDate.toISOString().slice(0, 10);
+    if (periodType === "month") {
+      const m = String(periodMonth).padStart(2, "0");
+      const lastDay = new Date(periodYear, periodMonth, 0).getDate();
+      from = `${periodYear}-${m}-01`;
+      to = `${periodYear}-${m}-${String(lastDay).padStart(2, "0")}`;
     } else if (periodType === "h1") {
       from = `${periodYear}-01-01`;
       to = `${periodYear}-06-30`;
@@ -94,7 +95,7 @@ export default function AttendanceClient({
     fetch(`/api/attendance?from=${from}&to=${to}`)
       .then((r) => r.json())
       .then((data) => setHistory(data));
-  }, [records, periodType, periodYear]);
+  }, [records, periodType, periodYear, periodMonth]);
 
   async function setStatus(workerId: string, status: AttendanceRecord["status"], projectId?: string | null) {
     if (!canEdit) return;
@@ -241,18 +242,22 @@ export default function AttendanceClient({
         <div className="p-5 border-b border-border space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <h2 className="text-lg font-bold text-foreground">
-              Përmbledhje {periodType === "30days" ? "30 ditët e fundit" : periodType === "h1" ? `Janar-Qershor ${periodYear}` : `Korrik-Dhjetor ${periodYear}`}
+              Përmbledhje {periodType === "month"
+                ? `${new Date(periodYear, periodMonth - 1).toLocaleDateString("sq-AL", { month: "long" })} ${periodYear}`
+                : periodType === "h1"
+                ? `Janar-Qershor ${periodYear}`
+                : `Korrik-Dhjetor ${periodYear}`}
             </h2>
             <div className="flex items-center gap-2 flex-wrap">
               <div className="flex bg-secondary/30 rounded-lg p-1">
                 <button
-                  onClick={() => setPeriodType("30days")}
+                  onClick={() => setPeriodType("month")}
                   className={cn(
                     "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
-                    periodType === "30days" ? "bg-orange-500/20 text-orange-400" : "text-muted-foreground"
+                    periodType === "month" ? "bg-orange-500/20 text-orange-400" : "text-muted-foreground"
                   )}
                 >
-                  30 dit&euml;
+                  Mujore
                 </button>
                 <button
                   onClick={() => setPeriodType("h1")}
@@ -273,17 +278,28 @@ export default function AttendanceClient({
                   6-mujori i dytë
                 </button>
               </div>
-              {periodType !== "30days" && (
+              {periodType === "month" && (
                 <select
-                  value={periodYear}
-                  onChange={(e) => setPeriodYear(parseInt(e.target.value))}
+                  value={periodMonth}
+                  onChange={(e) => setPeriodMonth(parseInt(e.target.value))}
                   className="bg-secondary border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-orange-500"
                 >
-                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((y) => (
-                    <option key={y} value={y}>{y}</option>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                    <option key={m} value={m}>
+                      {new Date(2026, m - 1).toLocaleDateString("sq-AL", { month: "long" })}
+                    </option>
                   ))}
                 </select>
               )}
+              <select
+                value={periodYear}
+                onChange={(e) => setPeriodYear(parseInt(e.target.value))}
+                className="bg-secondary border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-orange-500"
+              >
+                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
             </div>
           </div>
           <p className="text-xs text-muted-foreground">

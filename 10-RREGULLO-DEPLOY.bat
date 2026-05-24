@@ -7,7 +7,7 @@ cd /d "%~dp0"
 echo.
 echo ============================================================
 echo   - Rregullim: ADMIN_SALARIES enum
-echo   - Evidenca: 6-mujori i pare dhe i dyte
+echo   - Evidenca: zgjedh muaj specifik (Janar..Dhjetor) + 6-mujore
 echo   - Kalendari: kliko diten per zmadhim + shenime te editueshme
 echo ============================================================
 echo.
@@ -34,6 +34,6 @@ echo  Pas rebuild:
 echo   - Kalendari: kliko cdo dite per modal te madh
 echo                shkruaj cfardo shenimi, ruaj/fshi
 echo   - Pajisjet ne projekt = auto-shpenzim
-echo   - Evidenca: 30 dite / Janar-Qer / Korrik-Dhj
+echo   - Evidenca: Mujore (zgjedh muajin) / Janar-Qer / Korrik-Dhj
 echo ============================================================
 pause
