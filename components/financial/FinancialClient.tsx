@@ -196,7 +196,8 @@ export default function FinancialClient({ summary, monthlyData, projectFinancial
         <div className="p-5 border-b border-border">
           <h3 className="text-sm font-semibold text-foreground">Profitabiliteti sipas Projektit</h3>
         </div>
-        <table className="w-full">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[600px]">
           <thead>
             <tr className="border-b border-border">
               <th className="table-header px-4 py-3 text-left">Projekti</th>
@@ -263,6 +264,7 @@ export default function FinancialClient({ summary, monthlyData, projectFinancial
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

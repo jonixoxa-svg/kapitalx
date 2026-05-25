@@ -178,7 +178,7 @@ export default function HalfYearReport({ initialData, initialYear, initialHalf }
 
           {/* Sections */}
           <Section title="Shpenzime projekti" icon={<Wallet />} count={data.projectExpenses.length}>
-            <table className="w-full text-xs">
+            <div className="overflow-x-auto"><table className="w-full text-xs min-w-[500px]">
               <thead className="text-muted-foreground">
                 <tr className="border-b border-border">
                   <th className="text-left py-2">Data</th>
@@ -200,11 +200,11 @@ export default function HalfYearReport({ initialData, initialYear, initialHalf }
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </Section>
 
           <Section title="Shpenzime te pergjithshme" icon={<Wallet />} count={data.generalExpenses.length}>
-            <table className="w-full text-xs">
+            <div className="overflow-x-auto"><table className="w-full text-xs min-w-[500px]">
               <thead className="text-muted-foreground">
                 <tr className="border-b border-border">
                   <th className="text-left py-2">Periudha</th>
@@ -226,7 +226,7 @@ export default function HalfYearReport({ initialData, initialYear, initialHalf }
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </Section>
 
           <Section title="Projekte te perfunduara" icon={<FolderCheck />} count={data.completedProjects.length}>
@@ -251,7 +251,7 @@ export default function HalfYearReport({ initialData, initialYear, initialHalf }
           </Section>
 
           <Section title="Prodhimi" icon={<Hammer />} count={data.production.length}>
-            <table className="w-full text-xs">
+            <div className="overflow-x-auto"><table className="w-full text-xs min-w-[500px]">
               <thead className="text-muted-foreground">
                 <tr className="border-b border-border">
                   <th className="text-left py-2">Data</th>
@@ -275,11 +275,11 @@ export default function HalfYearReport({ initialData, initialYear, initialHalf }
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </Section>
 
           <Section title="Levizjet e stokut" icon={<Package />} count={data.stockMovements.length}>
-            <table className="w-full text-xs">
+            <div className="overflow-x-auto"><table className="w-full text-xs min-w-[500px]">
               <thead className="text-muted-foreground">
                 <tr className="border-b border-border">
                   <th className="text-left py-2">Data</th>
@@ -303,7 +303,7 @@ export default function HalfYearReport({ initialData, initialYear, initialHalf }
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </Section>
         </>
       )}

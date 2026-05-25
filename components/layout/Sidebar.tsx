@@ -12,7 +12,6 @@ import {
   Calendar,
   LogOut,
   Zap,
-  Settings,
   ChevronRight,
   Building2,
   CalendarCheck,
@@ -21,6 +20,7 @@ import {
   Package,
   FileBarChart,
   Zap as Lightning,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -90,16 +90,25 @@ const navItems = [
 interface SidebarProps {
   userName?: string;
   userRole?: string;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export default function Sidebar({ userName, userRole }: SidebarProps) {
+export default function Sidebar({ userName, userRole, isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-60 bg-card border-r border-border flex flex-col z-40">
+    <aside
+      className={cn(
+        "fixed left-0 top-0 h-full w-60 bg-card border-r border-border flex flex-col z-50",
+        "transition-transform duration-300 ease-out",
+        "md:translate-x-0 md:z-40",
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      )}
+    >
       {/* Logo */}
-      <div className="p-5 border-b border-border">
-        <Link href="/dashboard" className="flex items-center gap-2.5 group">
+      <div className="p-5 border-b border-border flex items-center justify-between">
+        <Link href="/dashboard" className="flex items-center gap-2.5 group" onClick={onClose}>
           <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-orange-400 transition-colors">
             <Zap className="w-4.5 h-4.5 text-white" size={18} />
           </div>
@@ -108,6 +117,14 @@ export default function Sidebar({ userName, userRole }: SidebarProps) {
             <p className="text-[10px] text-muted-foreground leading-none mt-0.5">Menaxhim Projektesh</p>
           </div>
         </Link>
+        {/* Close button - only on mobile */}
+        <button
+          onClick={onClose}
+          className="md:hidden p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="Mbyll menu"
+        >
+          <X className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Navigation */}
@@ -120,6 +137,7 @@ export default function Sidebar({ userName, userRole }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onClose}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group",
                 isActive

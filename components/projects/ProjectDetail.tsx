@@ -320,7 +320,8 @@ export default function ProjectDetail({ project: initialProject, workers, userRo
             )}
 
             <div className="bg-card border border-border rounded-xl overflow-hidden">
-              <table className="w-full">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[500px]">
                 <thead>
                   <tr className="border-b border-border">
                     <th className="table-header px-4 py-3 text-left">Kategoria</th>
@@ -387,6 +388,7 @@ export default function ProjectDetail({ project: initialProject, workers, userRo
                   </tfoot>
                 )}
               </table>
+              </div>
             </div>
           </div>
         )}

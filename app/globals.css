@@ -122,3 +122,64 @@
   fill: hsl(0, 0%, 63.9%) !important;
   font-size: 12px !important;
 }
+
+/* ============================================================
+   MOBILE RESPONSIVE - ndikon vetem kur ekrani eshte < 768px
+   PC view ngelet i pandryshuar
+   ============================================================ */
+@media (max-width: 767px) {
+  /* Tabelat scroll horizontal qe te mos pritet permbajtja */
+  .overflow-x-auto,
+  table {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Parandalon horizontal page scroll - body nuk del jashte ekranit */
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  /* Padding me te vogel ne mobile per faqet kryesore */
+  main > div > .p-6,
+  main > .p-6 {
+    padding: 1rem !important;
+  }
+
+  /* Modal-et te mos dalin jashte ekranit */
+  .max-w-4xl,
+  .max-w-3xl,
+  .max-w-2xl,
+  .max-w-xl,
+  .max-w-lg {
+    max-width: calc(100vw - 1rem) !important;
+  }
+
+  /* Tabelat: leji te scroll-ohen horizontalisht ne wrapper */
+  table {
+    font-size: 0.8125rem;
+  }
+
+  /* Btn-grupet me wrap qe te mos dalin jashte */
+  .page-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  /* Inputet/select-et font-size 16px qe te mos beje zoom iOS */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* Card-et me padding me te vogel */
+  .stat-card {
+    padding: 1rem;
+  }
+}
+
+/* Tabelat: wrapper qe i ben scroll-uese ne mobile */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}

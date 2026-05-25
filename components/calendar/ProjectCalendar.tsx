@@ -283,7 +283,8 @@ function WeekView({ start, events, notes, onSelectEvent, onSelectDay }: {
 
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
-      <div className="grid grid-cols-7">
+      <div className="overflow-x-auto">
+      <div className="grid grid-cols-7 min-w-[700px]">
         {days.map((d) => {
           const key = d.toISOString().slice(0, 10);
           const note = notes[key];
@@ -328,6 +329,7 @@ function WeekView({ start, events, notes, onSelectEvent, onSelectDay }: {
           );
         })}
       </div>
+      </div>
     </div>
   );
 }
@@ -350,6 +352,8 @@ function MonthView({ refDate, events, notes, onSelectEvent, onSelectDay }: {
 
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="overflow-x-auto">
+      <div className="min-w-[700px]">
       <div className="grid grid-cols-7 border-b border-border">
         {["Hën", "Mar", "Mër", "Enj", "Pre", "Sht", "Die"].map((d) => (
           <div key={d} className="px-2 py-2 text-[10px] uppercase tracking-wider text-muted-foreground font-medium text-center">{d}</div>
@@ -402,6 +406,8 @@ function MonthView({ refDate, events, notes, onSelectEvent, onSelectDay }: {
             </div>
           );
         })}
+      </div>
+      </div>
       </div>
     </div>
   );
