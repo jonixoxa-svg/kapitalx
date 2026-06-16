@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Calendar, Loader2, Plus, Plane, Trash2, X } from "lucide-react";
+import { Calendar, Loader2, Plus, Plane, Trash2, X, Save, Edit3 } from "lucide-react";
 import { toast } from "sonner";
 import {
   cn,
@@ -35,6 +35,7 @@ type WorkerVacation = {
   workerId: string;
   startDate: string;
   endDate: string;
+  workDays?: number;
   notes: string | null;
   worker?: { id: string; name: string; position: string };
 };
@@ -69,8 +70,24 @@ export default function AttendanceClient({
   const [vacWorkerId, setVacWorkerId] = useState("");
   const [vacStart, setVacStart] = useState("");
   const [vacEnd, setVacEnd] = useState("");
+  const [vacWorkDays, setVacWorkDays] = useState("");
   const [vacNotes, setVacNotes] = useState("");
   const [vacSaving, setVacSaving] = useState(false);
+  const [editingDaysId, setEditingDaysId] = useState<string | null>(null);
+  const [editingDaysValue, setEditingDaysValue] = useState("");
+
+  // Llogarit dite pune (Mon-Fri) ne nje periudhe
+  function calcWorkDays(start: string, end: string) {
+    if (!start || !end) return 0;
+    const s = new Date(start);
+    const e = new Date(end);
+    let n = 0;
+    for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+      const day = d.getDay();
+      if (day !== 0 && day !== 6) n++;
+    }
+    return n;
+  }
 
   const canEdit = userRole !== "VIEWER";
   const activeWorkers = workers.filter((w) => w.active);
@@ -170,7 +187,13 @@ export default function AttendanceClient({
       const res = await fetch("/api/worker-vacations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workerId: vacWorkerId, startDate: vacStart, endDate: vacEnd, notes: vacNotes }),
+        body: JSON.stringify({
+          workerId: vacWorkerId,
+          startDate: vacStart,
+          endDate: vacEnd,
+          workDays: vacWorkDays !== "" ? parseInt(vacWorkDays) : undefined,
+          notes: vacNotes,
+        }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -183,11 +206,34 @@ export default function AttendanceClient({
       setVacWorkerId("");
       setVacStart("");
       setVacEnd("");
+      setVacWorkDays("");
       setVacNotes("");
     } catch (e: any) {
       toast.error(e.message || "Gabim");
     } finally {
       setVacSaving(false);
+    }
+  }
+
+  async function saveDaysEdit(vacationId: string) {
+    const value = parseInt(editingDaysValue);
+    if (isNaN(value) || value < 0) {
+      toast.error("Vlerë jo e vlefshme");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/worker-vacations/${vacationId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workDays: value }),
+      });
+      if (!res.ok) throw new Error("Gabim");
+      const updated = await res.json();
+      setVacations((prev) => prev.map((v) => (v.id === vacationId ? updated : v)));
+      toast.success("U ruajt");
+      setEditingDaysId(null);
+    } catch {
+      toast.error("Gabim gjatë ruajtjes");
     }
   }
 
@@ -467,7 +513,8 @@ export default function AttendanceClient({
                   <th className="px-5 py-3 font-medium">Punëtori</th>
                   <th className="px-3 py-3 font-medium">Nga</th>
                   <th className="px-3 py-3 font-medium">Deri</th>
-                  <th className="px-3 py-3 font-medium text-center">Ditë</th>
+                  <th className="px-3 py-3 font-medium text-center">Total Ditë</th>
+                  <th className="px-3 py-3 font-medium text-center">Ditë Pune (editueshme)</th>
                   <th className="px-3 py-3 font-medium">Shënime</th>
                   {canEdit && <th className="px-3 py-3" />}
                 </tr>
@@ -476,13 +523,52 @@ export default function AttendanceClient({
                 {vacations.map((v) => {
                   const start = new Date(v.startDate);
                   const end = new Date(v.endDate);
-                  const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                  const totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                  const workDays = v.workDays ?? totalDays;
+                  const isEditing = editingDaysId === v.id;
                   return (
                     <tr key={v.id} className="border-t border-border">
                       <td className="px-5 py-3 text-foreground">{v.worker?.name || "?"}</td>
                       <td className="px-3 py-3 text-muted-foreground">{start.toLocaleDateString("sq-AL")}</td>
                       <td className="px-3 py-3 text-muted-foreground">{end.toLocaleDateString("sq-AL")}</td>
-                      <td className="px-3 py-3 text-center text-purple-400 font-semibold">{days}</td>
+                      <td className="px-3 py-3 text-center text-muted-foreground">{totalDays}</td>
+                      <td className="px-3 py-3 text-center">
+                        {isEditing && canEdit ? (
+                          <div className="flex items-center justify-center gap-1">
+                            <input
+                              type="number"
+                              min="0"
+                              value={editingDaysValue}
+                              onChange={(e) => setEditingDaysValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") saveDaysEdit(v.id);
+                                if (e.key === "Escape") setEditingDaysId(null);
+                              }}
+                              className="w-16 bg-secondary border border-border rounded px-2 py-1 text-xs text-center text-foreground focus:outline-none focus:border-purple-500"
+                              autoFocus
+                            />
+                            <button onClick={() => saveDaysEdit(v.id)} className="p-1 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30">
+                              <Save className="w-3 h-3" />
+                            </button>
+                            <button onClick={() => setEditingDaysId(null)} className="p-1 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30">
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            disabled={!canEdit}
+                            onClick={() => { setEditingDaysId(v.id); setEditingDaysValue(String(workDays)); }}
+                            className={cn(
+                              "px-3 py-1 rounded text-purple-400 font-semibold inline-flex items-center gap-1.5",
+                              canEdit && "hover:bg-purple-500/10 cursor-pointer"
+                            )}
+                            title={canEdit ? "Kliko për të edituar" : ""}
+                          >
+                            {workDays}
+                            {canEdit && <Edit3 className="w-3 h-3 opacity-60" />}
+                          </button>
+                        )}
+                      </td>
                       <td className="px-3 py-3 text-muted-foreground text-xs">{v.notes || "-"}</td>
                       {canEdit && (
                         <td className="px-3 py-3">
@@ -536,10 +622,29 @@ export default function AttendanceClient({
             </div>
 
             {vacStart && vacEnd && (
-              <p className="text-xs text-purple-400">
-                {Math.ceil((new Date(vacEnd).getTime() - new Date(vacStart).getTime()) / (1000 * 60 * 60 * 24)) + 1} ditë pushimi
-              </p>
+              <div className="text-xs text-muted-foreground bg-secondary/30 rounded-lg p-2 space-y-1">
+                <div>Total periudha: <span className="text-foreground font-medium">{Math.ceil((new Date(vacEnd).getTime() - new Date(vacStart).getTime()) / (1000 * 60 * 60 * 24)) + 1} ditë kalendarike</span></div>
+                <div>Ditë pune të llogaritura (Hen-Pre): <span className="text-purple-400 font-medium">{calcWorkDays(vacStart, vacEnd)} ditë</span></div>
+              </div>
             )}
+
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">
+                Ditë pune që humben *
+                <span className="text-[10px] text-muted-foreground/70 ml-1">(lëre bosh për të përdorur llogaritjen automatike)</span>
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={vacWorkDays}
+                onChange={(e) => setVacWorkDays(e.target.value)}
+                placeholder={vacStart && vacEnd ? `${calcWorkDays(vacStart, vacEnd)} (auto)` : "0"}
+                className="input-field"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                P.sh. nëse pushimi është 1-17 Gusht (17 ditë kalendarike) por humbasin vetëm 10 ditë pune, shkruaj 10.
+              </p>
+            </div>
 
             <div>
               <label className="text-xs text-muted-foreground block mb-1">Shënime (opsionale)</label>

@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   if (role === "VIEWER") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { workerId, startDate, endDate, notes } = body;
+  const { workerId, startDate, endDate, notes, workDays: providedWorkDays } = body;
 
   if (!workerId || !startDate || !endDate) {
     return NextResponse.json({ error: "workerId, startDate, endDate jane te detyrueshme" }, { status: 400 });
@@ -58,8 +58,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Data e fundit duhet pas dates se fillimit" }, { status: 400 });
   }
 
-  // Llogarit ditet e pushimit
-  const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  // Llogarit ditet e punes (Mon-Fri) ne ate periudhe si default
+  let computedWorkDays = 0;
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const day = d.getDay(); // 0 = Sun, 6 = Sat
+    if (day !== 0 && day !== 6) computedWorkDays++;
+  }
+
+  // Perdor vleren e dhene nese eshte, ose default
+  const workDays = providedWorkDays !== undefined && providedWorkDays !== null && providedWorkDays !== ""
+    ? Math.max(0, parseInt(providedWorkDays))
+    : computedWorkDays;
 
   // Kontrollo nese ka pushim te tjera te vitit qe e teprojne 14 ditesh
   const worker = await prisma.worker.findUnique({ where: { id: workerId } });
@@ -76,16 +85,12 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const usedDays = existing.reduce((sum, v) => {
-    const s = new Date(v.startDate);
-    const e = new Date(v.endDate);
-    return sum + Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-  }, 0);
+  const usedDays = existing.reduce((sum, v) => sum + (v.workDays || 0), 0);
 
   const allowed = worker.vacationDaysPerYear || 14;
-  if (usedDays + days > allowed) {
+  if (usedDays + workDays > allowed) {
     return NextResponse.json({
-      error: `Tejkalon kufirin vjetor (${allowed} dite). Tashme te shfrytezuara: ${usedDays}. Po kerkohen edhe ${days}.`,
+      error: `Tejkalon kufirin vjetor (${allowed} dite pune). Tashme te shfrytezuara: ${usedDays}. Po kerkohen edhe ${workDays}.`,
     }, { status: 400 });
   }
 
@@ -94,6 +99,7 @@ export async function POST(req: NextRequest) {
       workerId,
       startDate: start,
       endDate: end,
+      workDays,
       notes: notes || null,
     },
     include: { worker: { select: { id: true, name: true, position: true } } },
