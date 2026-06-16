@@ -5,18 +5,21 @@ import StatsCards from "@/components/dashboard/StatsCards";
 import RevenueChart from "@/components/dashboard/RevenueChart";
 import ProjectStatusChart from "@/components/dashboard/ProjectStatusChart";
 import RecentProjects from "@/components/dashboard/RecentProjects";
-import { formatCurrency, getExpenseCategoryLabel } from "@/lib/utils";
+import CashFlowSection from "@/components/dashboard/CashFlowSection";
+import { formatCurrency } from "@/lib/utils";
 
 async function getDashboardData() {
-  const [projects, workers, generalExpenses] = await Promise.all([
+  const [projects, workers, generalExpenses, settings] = await Promise.all([
     prisma.project.findMany({
       include: {
         expenses: true,
         workerAssignments: { include: { worker: true } },
+        payments: true,
       },
     }),
     prisma.worker.findMany(),
     prisma.generalExpense.findMany(),
+    prisma.companySettings.findFirst(),
   ]);
 
   const totalProjects = projects.length;
@@ -40,6 +43,44 @@ async function getDashboardData() {
 
   const totalWorkers = workers.length;
   const activeWorkers = workers.filter((w) => w.active).length;
+
+  // Llogarit borxhet nga klientet per cdo projekt aktiv
+  const debts = projects
+    .filter((p) => p.status !== "COMPLETED")
+    .map((p) => {
+      const paid = p.payments.reduce((s, pay) => s + pay.amount, 0);
+      const outstanding = Math.max(0, p.contractValue - paid);
+      return {
+        projectId: p.id,
+        projectName: p.name,
+        client: p.client,
+        contractValue: p.contractValue,
+        paid,
+        outstanding,
+      };
+    })
+    .filter((d) => d.outstanding > 0)
+    .sort((a, b) => b.outstanding - a.outstanding);
+
+  const totalOutstanding = debts.reduce((s, d) => s + d.outstanding, 0);
+
+  // Fitimi i pritshem ne fund = te ardhura totale - te gjitha shpenzimet e bera ose te ardhshme
+  const expectedFinalProfit = totalRevenue - totalProjectExpenses - totalLaborCost - totalGeneralExpenses;
+
+  // Shpenzimi mesatar per muaj (6 muajt e fundit)
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  const recentExpenses = projects
+    .flatMap((p) => p.expenses)
+    .filter((e) => new Date(e.date) >= sixMonthsAgo)
+    .reduce((s, e) => s + e.amount, 0);
+  const recentGeneralExpenses = generalExpenses
+    .filter((e) => {
+      const d = new Date(e.year, e.month - 1, 1);
+      return d >= sixMonthsAgo;
+    })
+    .reduce((s, e) => s + e.amount, 0);
+  const monthlyExpenseAverage = (recentExpenses + recentGeneralExpenses) / 6;
 
   // Monthly data
   const now = new Date();
@@ -119,12 +160,20 @@ async function getDashboardData() {
       { name: "Planifikuar", value: plannedProjects, color: "#eab308" },
       { name: "Pezulluar", value: projects.filter((p) => p.status === "ON_HOLD").length, color: "#ef4444" },
     ],
+    debts,
+    totalOutstanding,
+    cashOnHand: settings?.cashOnHand || 0,
+    bankOverdraft: settings?.bankOverdraft || 0,
+    expectedFinalProfit,
+    monthlyExpenseAverage,
   };
 }
 
 export default async function DashboardPage() {
   const session = await auth();
   const data = await getDashboardData();
+  const role = (session?.user as any)?.role || "VIEWER";
+  const canEdit = role === "ADMIN" || role === "MANAGER";
 
   const stats = [
     {
@@ -171,6 +220,18 @@ export default async function DashboardPage() {
       <div className="p-6 space-y-6 animate-fade-in">
         {/* Stats */}
         <StatsCards stats={stats} />
+
+        {/* Cash Flow + Borxhet */}
+        <CashFlowSection
+          debts={data.debts}
+          totalOutstanding={data.totalOutstanding}
+          cashOnHand={data.cashOnHand}
+          bankOverdraft={data.bankOverdraft}
+          expectedFinalProfit={data.expectedFinalProfit}
+          currentNetProfit={data.netProfit}
+          monthlyExpenseAverage={data.monthlyExpenseAverage}
+          canEdit={canEdit}
+        />
 
         {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

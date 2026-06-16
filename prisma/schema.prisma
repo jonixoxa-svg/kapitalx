@@ -286,6 +286,8 @@ model CompanySettings {
   id                  String   @id @default(cuid())
   totalRevenue        Float    @default(0)
   totalRevenueNote    String?
+  cashOnHand          Float    @default(0)
+  bankOverdraft       Float    @default(0)
   updatedAt           DateTime @updatedAt
   createdAt           DateTime @default(now())
 }
