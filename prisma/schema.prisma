@@ -70,6 +70,8 @@ enum AttendanceStatus {
   SICK
   PAID_LEAVE
   UNEXCUSED
+  VACATION
+  MAKEUP
 }
 
 enum EquipmentType {
@@ -165,11 +167,27 @@ model Worker {
   email        String?
   dailyRate    Float
   active       Boolean           @default(true)
+  vacationDaysPerYear Int        @default(14)
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
   assignments  WorkerAssignment[]
   attendance   Attendance[]
   productionWorkers ProductionWorker[]
+  vacations    WorkerVacation[]
+}
+
+model WorkerVacation {
+  id        String   @id @default(cuid())
+  workerId  String
+  worker    Worker   @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  startDate DateTime
+  endDate   DateTime
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workerId])
+  @@index([startDate])
 }
 
 model WorkerAssignment {

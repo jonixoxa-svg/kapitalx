@@ -117,6 +117,8 @@ export function getAttendanceStatusLabel(status: string): string {
     case "SICK": return "Sëmurë";
     case "PAID_LEAVE": return "Leje me pagesë";
     case "UNEXCUSED": return "Mungesë";
+    case "VACATION": return "Pushim";
+    case "MAKEUP": return "Kompensim";
     default: return status;
   }
 }
@@ -131,14 +133,18 @@ export function getAttendanceStatusColor(status: string): string {
       return "text-blue-400 bg-blue-400/10 border-blue-400/20";
     case "UNEXCUSED":
       return "text-red-400 bg-red-400/10 border-red-400/20";
+    case "VACATION":
+      return "text-purple-400 bg-purple-400/10 border-purple-400/20";
+    case "MAKEUP":
+      return "text-cyan-400 bg-cyan-400/10 border-cyan-400/20";
     default:
       return "text-gray-400 bg-gray-400/10 border-gray-400/20";
   }
 }
 
-// Day is paid only when worker was Present or on paid leave
+// Day is paid only when worker was Present, on paid leave, on vacation, or a makeup day
 export function isAttendanceDayPaid(status: string): boolean {
-  return status === "PRESENT" || status === "PAID_LEAVE";
+  return status === "PRESENT" || status === "PAID_LEAVE" || status === "VACATION" || status === "MAKEUP";
 }
 
 export function getEquipmentTypeLabel(type: string): string {

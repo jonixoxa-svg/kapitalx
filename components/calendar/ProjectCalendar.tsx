@@ -49,10 +49,20 @@ interface Worker {
   position: string;
 }
 
+interface WorkerVacation {
+  id: string;
+  workerId: string;
+  startDate: string | Date;
+  endDate: string | Date;
+  notes: string | null;
+  worker?: { id: string; name: string; position: string };
+}
+
 interface Props {
   projects: Project[];
   productions: Production[];
   workers: Worker[];
+  vacations?: WorkerVacation[];
   userRole: string;
 }
 
@@ -73,7 +83,7 @@ function monthName(d: Date) { return d.toLocaleDateString("sq-AL", { month: "lon
 
 interface CalendarEvent {
   id: string;
-  type: "project" | "milestone" | "production";
+  type: "project" | "milestone" | "production" | "vacation";
   title: string;
   subtitle?: string;
   start: Date;
@@ -82,7 +92,7 @@ interface CalendarEvent {
   raw: any;
 }
 
-export default function ProjectCalendar({ projects, productions, workers, userRole }: Props) {
+export default function ProjectCalendar({ projects, productions, workers, vacations = [], userRole }: Props) {
   const router = useRouter();
   const [view, setView] = useState<ViewType>("month");
   const [refDate, setRefDate] = useState(new Date());
@@ -166,8 +176,22 @@ export default function ProjectCalendar({ projects, productions, workers, userRo
       });
     });
 
+    // Pushimet e punëtorëve
+    vacations.forEach((v) => {
+      evs.push({
+        id: `vacation-${v.id}`,
+        type: "vacation",
+        title: `Pushim: ${v.worker?.name || "?"}`,
+        subtitle: v.notes || undefined,
+        start: dateOnly(v.startDate),
+        end: dateOnly(v.endDate),
+        color: "bg-fuchsia-500/20 border-fuchsia-500/50 text-fuchsia-300",
+        raw: v,
+      });
+    });
+
     return evs;
-  }, [projects, productions]);
+  }, [projects, productions, vacations]);
 
   // Period
   const period = useMemo(() => {
@@ -239,6 +263,7 @@ export default function ProjectCalendar({ projects, productions, workers, userRo
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-blue-500/40" /> Faze</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-green-500/40" /> Faze e perfunduar</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-purple-500/40" /> Prodhim</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-fuchsia-500/40" /> Pushim punëtori</span>
       </div>
 
       {/* Calendar */}

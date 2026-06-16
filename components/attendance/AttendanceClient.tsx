@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Calendar, CheckCircle2, AlertCircle, BadgeCheck, XCircle, Save, Loader2 } from "lucide-react";
+import { Calendar, Loader2, Plus, Plane, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   cn,
   formatCurrency,
   getAttendanceStatusLabel,
   getAttendanceStatusColor,
-  isAttendanceDayPaid,
 } from "@/lib/utils";
 
 type Worker = {
@@ -17,6 +16,7 @@ type Worker = {
   position: string;
   dailyRate: number;
   active: boolean;
+  vacationDaysPerYear?: number;
 };
 
 type Project = { id: string; name: string };
@@ -25,12 +25,21 @@ type AttendanceRecord = {
   id: string;
   workerId: string;
   date: string;
-  status: "PRESENT" | "SICK" | "PAID_LEAVE" | "UNEXCUSED";
+  status: "PRESENT" | "SICK" | "PAID_LEAVE" | "UNEXCUSED" | "VACATION" | "MAKEUP";
   projectId: string | null;
   notes: string | null;
 };
 
-const STATUSES: AttendanceRecord["status"][] = ["PRESENT", "SICK", "PAID_LEAVE", "UNEXCUSED"];
+type WorkerVacation = {
+  id: string;
+  workerId: string;
+  startDate: string;
+  endDate: string;
+  notes: string | null;
+  worker?: { id: string; name: string; position: string };
+};
+
+const STATUSES: AttendanceRecord["status"][] = ["PRESENT", "SICK", "PAID_LEAVE", "UNEXCUSED", "VACATION", "MAKEUP"];
 
 function todayISO() {
   const d = new Date();
@@ -55,9 +64,23 @@ export default function AttendanceClient({
   const [periodType, setPeriodType] = useState<"month" | "h1" | "h2">("month");
   const [periodYear, setPeriodYear] = useState(new Date().getFullYear());
   const [periodMonth, setPeriodMonth] = useState(new Date().getMonth() + 1); // 1-12
+  const [vacations, setVacations] = useState<WorkerVacation[]>([]);
+  const [showVacationDialog, setShowVacationDialog] = useState(false);
+  const [vacWorkerId, setVacWorkerId] = useState("");
+  const [vacStart, setVacStart] = useState("");
+  const [vacEnd, setVacEnd] = useState("");
+  const [vacNotes, setVacNotes] = useState("");
+  const [vacSaving, setVacSaving] = useState(false);
 
   const canEdit = userRole !== "VIEWER";
   const activeWorkers = workers.filter((w) => w.active);
+
+  // Fetch all vacations
+  useEffect(() => {
+    fetch("/api/worker-vacations")
+      .then((r) => r.json())
+      .then((data) => setVacations(data || []));
+  }, []);
 
   // Fetch records for the selected date
   useEffect(() => {
@@ -123,17 +146,68 @@ export default function AttendanceClient({
   }
 
   const summary = useMemo(() => {
-    const byWorker: Record<string, { present: number; sick: number; paidLeave: number; unexcused: number }> = {};
+    const byWorker: Record<string, { present: number; sick: number; paidLeave: number; unexcused: number; vacation: number; makeup: number }> = {};
     for (const r of history) {
-      if (!byWorker[r.workerId]) byWorker[r.workerId] = { present: 0, sick: 0, paidLeave: 0, unexcused: 0 };
+      if (!byWorker[r.workerId]) byWorker[r.workerId] = { present: 0, sick: 0, paidLeave: 0, unexcused: 0, vacation: 0, makeup: 0 };
       const b = byWorker[r.workerId];
       if (r.status === "PRESENT") b.present++;
       else if (r.status === "SICK") b.sick++;
       else if (r.status === "PAID_LEAVE") b.paidLeave++;
       else if (r.status === "UNEXCUSED") b.unexcused++;
+      else if (r.status === "VACATION") b.vacation++;
+      else if (r.status === "MAKEUP") b.makeup++;
     }
     return byWorker;
   }, [history]);
+
+  async function saveVacation() {
+    if (!vacWorkerId || !vacStart || !vacEnd) {
+      toast.error("Plotëso punëtorin dhe datat");
+      return;
+    }
+    setVacSaving(true);
+    try {
+      const res = await fetch("/api/worker-vacations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workerId: vacWorkerId, startDate: vacStart, endDate: vacEnd, notes: vacNotes }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Gabim");
+      }
+      const created = await res.json();
+      setVacations((prev) => [...prev, created]);
+      toast.success("Pushimi u shtua");
+      setShowVacationDialog(false);
+      setVacWorkerId("");
+      setVacStart("");
+      setVacEnd("");
+      setVacNotes("");
+    } catch (e: any) {
+      toast.error(e.message || "Gabim");
+    } finally {
+      setVacSaving(false);
+    }
+  }
+
+  async function deleteVacation(id: string) {
+    if (!confirm("Fshi këtë pushim? Mungesat e ditëve do hiqen.")) return;
+    try {
+      const res = await fetch(`/api/worker-vacations/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Gabim");
+      setVacations((prev) => prev.filter((v) => v.id !== id));
+      toast.success("Pushimi u fshi");
+    } catch {
+      toast.error("Gabim gjatë fshirjes");
+    }
+  }
+
+  // Lista e pushimeve aktive sot
+  const activeVacations = useMemo(() => {
+    const today = new Date(selectedDate);
+    return vacations.filter((v) => new Date(v.startDate) <= today && new Date(v.endDate) >= today);
+  }, [vacations, selectedDate]);
 
   return (
     <div className="space-y-6">
@@ -303,7 +377,7 @@ export default function AttendanceClient({
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
-            Pagohen vetëm ditët <span className="text-green-400">Prezent</span> dhe <span className="text-blue-400">Leje me pagesë</span>.
+            Pagohen <span className="text-green-400">Prezent</span>, <span className="text-blue-400">Leje me pagesë</span>, <span className="text-purple-400">Pushim</span>, dhe <span className="text-cyan-400">Kompensim</span>. Mungesa neto = Mungesë − Kompensim.
           </p>
         </div>
         <div className="overflow-x-auto">
@@ -311,25 +385,32 @@ export default function AttendanceClient({
             <thead>
               <tr className="text-xs uppercase text-muted-foreground bg-secondary/30">
                 <th className="px-5 py-3 font-medium">Punëtori</th>
-                <th className="px-3 py-3 font-medium text-center">Prezent</th>
-                <th className="px-3 py-3 font-medium text-center">Sëmurë</th>
-                <th className="px-3 py-3 font-medium text-center">Leje</th>
-                <th className="px-3 py-3 font-medium text-center">Mungesë</th>
-                <th className="px-5 py-3 font-medium text-right">Pagesa e llogaritur</th>
+                <th className="px-2 py-3 font-medium text-center">Prezent</th>
+                <th className="px-2 py-3 font-medium text-center">Sëmurë</th>
+                <th className="px-2 py-3 font-medium text-center">Leje</th>
+                <th className="px-2 py-3 font-medium text-center">Pushim</th>
+                <th className="px-2 py-3 font-medium text-center">Kompensim</th>
+                <th className="px-2 py-3 font-medium text-center">Mungesë</th>
+                <th className="px-2 py-3 font-medium text-center text-red-400">Mungesë Neto</th>
+                <th className="px-5 py-3 font-medium text-right">Pagesa</th>
               </tr>
             </thead>
             <tbody>
               {activeWorkers.map((w) => {
-                const s = summary[w.id] || { present: 0, sick: 0, paidLeave: 0, unexcused: 0 };
-                const paidDays = s.present + s.paidLeave;
+                const s = summary[w.id] || { present: 0, sick: 0, paidLeave: 0, unexcused: 0, vacation: 0, makeup: 0 };
+                const netMungesa = Math.max(0, s.unexcused - s.makeup);
+                const paidDays = s.present + s.paidLeave + s.vacation + s.makeup;
                 const pay = paidDays * w.dailyRate;
                 return (
                   <tr key={w.id} className="border-t border-border">
                     <td className="px-5 py-3 text-foreground">{w.name}</td>
-                    <td className="px-3 py-3 text-center text-green-400 font-semibold">{s.present}</td>
-                    <td className="px-3 py-3 text-center text-yellow-400">{s.sick}</td>
-                    <td className="px-3 py-3 text-center text-blue-400">{s.paidLeave}</td>
-                    <td className="px-3 py-3 text-center text-red-400">{s.unexcused}</td>
+                    <td className="px-2 py-3 text-center text-green-400 font-semibold">{s.present}</td>
+                    <td className="px-2 py-3 text-center text-yellow-400">{s.sick}</td>
+                    <td className="px-2 py-3 text-center text-blue-400">{s.paidLeave}</td>
+                    <td className="px-2 py-3 text-center text-purple-400">{s.vacation}</td>
+                    <td className="px-2 py-3 text-center text-cyan-400">{s.makeup}</td>
+                    <td className="px-2 py-3 text-center text-red-400/70">{s.unexcused}</td>
+                    <td className="px-2 py-3 text-center font-bold text-red-400">{netMungesa}</td>
                     <td className="px-5 py-3 text-right font-bold text-orange-400">{formatCurrency(pay)}</td>
                   </tr>
                 );
@@ -338,6 +419,143 @@ export default function AttendanceClient({
           </table>
         </div>
       </div>
+
+      {/* Seksioni i Pushimeve */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="p-5 border-b border-border flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+              <Plane className="w-4 h-4 text-purple-400" />
+              Pushimet e Punëtorëve
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              14 ditë në vit për secilin. Kur janë në pushim, nuk caktohen në punë.
+            </p>
+          </div>
+          {canEdit && (
+            <button
+              onClick={() => setShowVacationDialog(true)}
+              className="btn-primary"
+            >
+              <Plus className="w-4 h-4" />
+              Shto Pushim
+            </button>
+          )}
+        </div>
+
+        {/* Pushimet aktive sot */}
+        {activeVacations.length > 0 && (
+          <div className="p-4 border-b border-border bg-purple-500/5">
+            <p className="text-xs font-semibold text-purple-400 mb-2">Në pushim sot ({new Date(selectedDate).toLocaleDateString("sq-AL")}):</p>
+            <div className="flex flex-wrap gap-2">
+              {activeVacations.map((v) => (
+                <span key={v.id} className="text-xs px-2 py-1 rounded-md bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                  {v.worker?.name || "?"}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {vacations.length === 0 ? (
+          <div className="p-8 text-center text-sm text-muted-foreground">Asnjë pushim i regjistruar.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="text-xs uppercase text-muted-foreground bg-secondary/30">
+                  <th className="px-5 py-3 font-medium">Punëtori</th>
+                  <th className="px-3 py-3 font-medium">Nga</th>
+                  <th className="px-3 py-3 font-medium">Deri</th>
+                  <th className="px-3 py-3 font-medium text-center">Ditë</th>
+                  <th className="px-3 py-3 font-medium">Shënime</th>
+                  {canEdit && <th className="px-3 py-3" />}
+                </tr>
+              </thead>
+              <tbody>
+                {vacations.map((v) => {
+                  const start = new Date(v.startDate);
+                  const end = new Date(v.endDate);
+                  const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                  return (
+                    <tr key={v.id} className="border-t border-border">
+                      <td className="px-5 py-3 text-foreground">{v.worker?.name || "?"}</td>
+                      <td className="px-3 py-3 text-muted-foreground">{start.toLocaleDateString("sq-AL")}</td>
+                      <td className="px-3 py-3 text-muted-foreground">{end.toLocaleDateString("sq-AL")}</td>
+                      <td className="px-3 py-3 text-center text-purple-400 font-semibold">{days}</td>
+                      <td className="px-3 py-3 text-muted-foreground text-xs">{v.notes || "-"}</td>
+                      {canEdit && (
+                        <td className="px-3 py-3">
+                          <button
+                            onClick={() => deleteVacation(v.id)}
+                            className="p-1.5 rounded-md hover:bg-red-400/10 text-muted-foreground hover:text-red-400 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Dialog për shtim pushimi */}
+      {showVacationDialog && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-xl w-full max-w-md p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-foreground">Shto Pushim</h3>
+              <button onClick={() => setShowVacationDialog(false)} className="p-1 rounded hover:bg-secondary">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Punëtori *</label>
+              <select value={vacWorkerId} onChange={(e) => setVacWorkerId(e.target.value)} className="input-field">
+                <option value="">— Zgjedh punëtorin —</option>
+                {activeWorkers.map((w) => (
+                  <option key={w.id} value={w.id}>{w.name} ({w.position})</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">Nga *</label>
+                <input type="date" value={vacStart} onChange={(e) => setVacStart(e.target.value)} className="input-field" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">Deri *</label>
+                <input type="date" value={vacEnd} onChange={(e) => setVacEnd(e.target.value)} className="input-field" />
+              </div>
+            </div>
+
+            {vacStart && vacEnd && (
+              <p className="text-xs text-purple-400">
+                {Math.ceil((new Date(vacEnd).getTime() - new Date(vacStart).getTime()) / (1000 * 60 * 60 * 24)) + 1} ditë pushimi
+              </p>
+            )}
+
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Shënime (opsionale)</label>
+              <textarea value={vacNotes} onChange={(e) => setVacNotes(e.target.value)} rows={2} className="input-field" placeholder="P.sh. Pushim verues" />
+            </div>
+
+            <div className="flex items-center justify-end gap-2">
+              <button onClick={() => setShowVacationDialog(false)} className="btn-secondary">Anulo</button>
+              <button onClick={saveVacation} disabled={vacSaving} className="btn-primary">
+                {vacSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                Ruaj
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

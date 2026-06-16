@@ -7,7 +7,7 @@ export default async function CalendarPage() {
   const session = await auth();
   const role = (session?.user as any)?.role || "VIEWER";
 
-  const [projects, productions, workers] = await Promise.all([
+  const [projects, productions, workers, vacations] = await Promise.all([
     prisma.project.findMany({
       include: {
         milestones: { orderBy: { order: "asc" } },
@@ -20,16 +20,21 @@ export default async function CalendarPage() {
       orderBy: { startDate: "asc" },
     }),
     prisma.worker.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+    prisma.workerVacation.findMany({
+      include: { worker: { select: { id: true, name: true, position: true } } },
+      orderBy: { startDate: "asc" },
+    }),
   ]);
 
   return (
     <div className="min-h-screen">
-      <Header title="Kalendari" subtitle="Pamje vizuale e projekteve, fazave dhe prodhimit" />
+      <Header title="Kalendari" subtitle="Pamje vizuale e projekteve, fazave, prodhimit dhe pushimeve" />
       <div className="p-6 animate-fade-in">
         <ProjectCalendar
           projects={projects as any}
           productions={productions as any}
           workers={workers as any}
+          vacations={vacations as any}
           userRole={role}
         />
       </div>
