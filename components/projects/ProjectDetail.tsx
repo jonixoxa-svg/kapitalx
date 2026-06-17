@@ -16,8 +16,9 @@ import WorkerAssignmentForm from "./WorkerAssignmentForm";
 import DocumentUpload from "./DocumentUpload";
 import PaymentsSection from "./PaymentsSection";
 import MilestonesSection from "./MilestonesSection";
+import ProjectSubcontractorsSection from "./ProjectSubcontractorsSection";
 
-const TABS = ["overview", "milestones", "payments", "expenses", "workers", "documents", "activity"] as const;
+const TABS = ["overview", "milestones", "payments", "expenses", "workers", "subcontractors", "documents", "activity"] as const;
 type Tab = typeof TABS[number];
 
 const TAB_LABELS: Record<Tab, string> = {
@@ -26,6 +27,7 @@ const TAB_LABELS: Record<Tab, string> = {
   payments: "Pagesat",
   expenses: "Shpenzime",
   workers: "Punëtorët",
+  subcontractors: "Bashkëpuntorët",
   documents: "Dokumentet",
   activity: "Aktiviteti",
 };
@@ -508,6 +510,14 @@ export default function ProjectDetail({ project: initialProject, workers, userRo
             projectId={project.id}
             payments={project.payments || []}
             contractValue={project.contractValue}
+            userRole={userRole}
+          />
+        )}
+
+        {/* Subcontractors */}
+        {activeTab === "subcontractors" && (
+          <ProjectSubcontractorsSection
+            projectId={project.id}
             userRole={userRole}
           />
         )}

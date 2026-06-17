@@ -27,7 +27,14 @@ enum ExpenseCategory {
   EQUIPMENT
   FOOD
   ACCOMMODATION
+  SUBCONTRACTOR
   OTHER
+}
+
+enum SubcontractorAssignmentStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
 }
 
 enum GeneralExpenseCategory {
@@ -123,6 +130,7 @@ model Project {
   milestones       ProjectMilestone[]
   generalExpenses  GeneralExpense[]
   stockMovements   StockMovement[]
+  subcontractorAssignments SubcontractorAssignment[]
 }
 
 model Expense {
@@ -135,6 +143,8 @@ model Expense {
   date                     DateTime        @default(now())
   receipt                  String?
   sourceEquipmentAssignmentId String?      @unique
+  sourceSubcontractorPaymentId String?     @unique
+  sourceSubcontractorPayment   SubcontractorPayment? @relation(fields: [sourceSubcontractorPaymentId], references: [id], onDelete: SetNull)
   createdAt                DateTime        @default(now())
   updatedAt                DateTime        @updatedAt
 }
@@ -394,5 +404,60 @@ model CalendarNote {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([date])
+}
+
+// ====== BASHKEPUNTORET (Nenkontraktoret) ======
+model Subcontractor {
+  id          String                    @id @default(cuid())
+  name        String
+  specialty   String?                   // P.sh. "Elektriker", "Hidraulik", "Solare", "Xhama"
+  contactName String?                   // Personi i kontaktit
+  phone       String?
+  email       String?
+  address     String?
+  taxId       String?                   // NIPT / Numri fiskal
+  notes       String?
+  active      Boolean                   @default(true)
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+  assignments SubcontractorAssignment[]
+}
+
+model SubcontractorAssignment {
+  id              String                       @id @default(cuid())
+  subcontractorId String
+  subcontractor   Subcontractor                @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
+  projectId       String
+  project         Project                      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workDescription String                       // Pershkrim i punes (psh "Instalim elektrik kati 1")
+  agreedAmount    Float                        // Vlera totale e dakorduar
+  startDate       DateTime
+  endDate         DateTime?
+  status          SubcontractorAssignmentStatus @default(ACTIVE)
+  notes           String?
+  createdAt       DateTime                     @default(now())
+  updatedAt       DateTime                     @updatedAt
+  payments        SubcontractorPayment[]
+
+  @@index([projectId])
+  @@index([subcontractorId])
+}
+
+model SubcontractorPayment {
+  id           String                  @id @default(cuid())
+  assignmentId String
+  assignment   SubcontractorAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  amount       Float
+  date         DateTime
+  description  String?
+  method       PaymentMethod           @default(CASH)
+  receiptUrl   String?
+  receiptName  String?
+  linkedExpense Expense?              // Lidhja me Expense ne projekt (auto-krijuar)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+
+  @@index([assignmentId])
   @@index([date])
 }

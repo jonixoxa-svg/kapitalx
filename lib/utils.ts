@@ -62,6 +62,7 @@ export function getExpenseCategoryLabel(category: string): string {
     EQUIPMENT: "Pajisje",
     FOOD: "Ushqim",
     ACCOMMODATION: "Akomodim",
+    SUBCONTRACTOR: "Bashkëpuntor",
     OTHER: "Të tjera",
   };
   return labels[category] || category;

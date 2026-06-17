@@ -19,6 +19,7 @@ import {
   Hammer,
   Package,
   FileBarChart,
+  Handshake,
   Zap as Lightning,
   X,
 } from "lucide-react";
@@ -59,6 +60,11 @@ const navItems = [
     label: "Pajisjet",
     href: "/equipment",
     icon: Truck,
+  },
+  {
+    label: "Bashkëpunëtorët",
+    href: "/subcontractors",
+    icon: Handshake,
   },
   {
     label: "Prodhimi",
