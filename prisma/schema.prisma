@@ -312,13 +312,15 @@ model ProjectPayment {
 }
 
 model CompanySettings {
-  id                  String   @id @default(cuid())
-  totalRevenue        Float    @default(0)
-  totalRevenueNote    String?
-  cashOnHand          Float    @default(0)
-  bankOverdraft       Float    @default(0)
-  updatedAt           DateTime @updatedAt
-  createdAt           DateTime @default(now())
+  id                       String   @id @default(cuid())
+  totalRevenue             Float    @default(0)
+  totalRevenueNote         String?
+  cashOnHand               Float    @default(0)
+  bankOverdraft            Float    @default(0)
+  monthlyExpensesAverage   Float    @default(17500)
+  targetMonthlyProfit      Float    @default(5000)
+  updatedAt                DateTime @updatedAt
+  createdAt                DateTime @default(now())
 }
 
 model ProjectMilestone {
@@ -405,6 +407,26 @@ model CalendarNote {
   updatedAt DateTime @updatedAt
 
   @@index([date])
+}
+
+// ====== SHPENZIMET E DYSHIMTA ======
+// Per shpenzime/pagesa qe ende s'jane konfirmuar nese jane:
+//  - per nje projekt specifik
+//  - apo te pergjithshme te firmes
+// Operatori i caktoi me vone duke klikuar "Coj te projekti" ose "Coj te pergjithshme"
+model PendingExpense {
+  id          String   @id @default(cuid())
+  description String
+  amount      Float
+  date        DateTime @default(now())
+  source      String?              // p.sh. "Gmail email 18.06.2026"
+  reason      String?              // p.sh. "Vlere e perseritur me nje shpenzim tjeter"
+  notes       String?
+  receiptUrl  String?
+  receiptName String?
+  type        String   @default("EXPENSE")  // EXPENSE ose PAYMENT
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 // ====== BASHKEPUNTORET (Nenkontraktoret) ======

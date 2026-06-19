@@ -6,10 +6,11 @@ import RevenueChart from "@/components/dashboard/RevenueChart";
 import ProjectStatusChart from "@/components/dashboard/ProjectStatusChart";
 import RecentProjects from "@/components/dashboard/RecentProjects";
 import CashFlowSection from "@/components/dashboard/CashFlowSection";
+import MonthlyTargetSection from "@/components/dashboard/MonthlyTargetSection";
 import { formatCurrency } from "@/lib/utils";
 
 async function getDashboardData() {
-  const [projects, workers, generalExpenses, settings] = await Promise.all([
+  const [projects, workers, generalExpenses, settings, allPayments] = await Promise.all([
     prisma.project.findMany({
       include: {
         expenses: true,
@@ -20,6 +21,7 @@ async function getDashboardData() {
     prisma.worker.findMany(),
     prisma.generalExpense.findMany(),
     prisma.companySettings.findFirst(),
+    prisma.projectPayment.findMany(),
   ]);
 
   const totalProjects = projects.length;
@@ -81,6 +83,15 @@ async function getDashboardData() {
     })
     .reduce((s, e) => s + e.amount, 0);
   const monthlyExpenseAverage = (recentExpenses + recentGeneralExpenses) / 6;
+
+  // Llogarit te ardhura mesatare mujore nga pagesat e 6 muajve te fundit
+  const recentPayments = allPayments
+    .filter((p) => new Date(p.date) >= sixMonthsAgo)
+    .reduce((s, p) => s + p.amount, 0);
+  const actualMonthlyRevenue = recentPayments / 6;
+
+  // Shpenzimet faktike mujore (te projekteve + te pergjithshme)
+  const actualMonthlyExpenses = (recentExpenses + recentGeneralExpenses) / 6;
 
   // Monthly data
   const now = new Date();
@@ -166,6 +177,10 @@ async function getDashboardData() {
     bankOverdraft: settings?.bankOverdraft || 0,
     expectedFinalProfit,
     monthlyExpenseAverage,
+    monthlyExpensesAverage: settings?.monthlyExpensesAverage ?? 17500,
+    targetMonthlyProfit: settings?.targetMonthlyProfit ?? 5000,
+    actualMonthlyRevenue,
+    actualMonthlyExpenses,
   };
 }
 
@@ -220,6 +235,15 @@ export default async function DashboardPage() {
       <div className="p-6 space-y-6 animate-fade-in">
         {/* Stats */}
         <StatsCards stats={stats} />
+
+        {/* Objektivi Mujor */}
+        <MonthlyTargetSection
+          monthlyExpensesAverage={data.monthlyExpensesAverage}
+          targetMonthlyProfit={data.targetMonthlyProfit}
+          actualMonthlyRevenue={data.actualMonthlyRevenue}
+          actualMonthlyExpenses={data.actualMonthlyExpenses}
+          canEdit={canEdit}
+        />
 
         {/* Cash Flow + Borxhet */}
         <CashFlowSection

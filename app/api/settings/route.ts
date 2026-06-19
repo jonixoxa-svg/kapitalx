@@ -28,7 +28,7 @@ export async function PUT(req: NextRequest) {
   if (role === "VIEWER") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { totalRevenue, totalRevenueNote, cashOnHand, bankOverdraft } = body;
+  const { totalRevenue, totalRevenueNote, cashOnHand, bankOverdraft, monthlyExpensesAverage, targetMonthlyProfit } = body;
 
   const settings = await getOrCreateSettings();
 
@@ -50,6 +50,14 @@ export async function PUT(req: NextRequest) {
   if (bankOverdraft !== undefined) {
     const val = parseFloat(bankOverdraft);
     if (!isNaN(val)) data.bankOverdraft = val;
+  }
+  if (monthlyExpensesAverage !== undefined) {
+    const val = parseFloat(monthlyExpensesAverage);
+    if (!isNaN(val) && val >= 0) data.monthlyExpensesAverage = val;
+  }
+  if (targetMonthlyProfit !== undefined) {
+    const val = parseFloat(targetMonthlyProfit);
+    if (!isNaN(val) && val >= 0) data.targetMonthlyProfit = val;
   }
 
   const updated = await prisma.companySettings.update({

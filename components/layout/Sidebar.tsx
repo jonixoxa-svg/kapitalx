@@ -20,6 +20,7 @@ import {
   Package,
   FileBarChart,
   Handshake,
+  AlertTriangle,
   Zap as Lightning,
   X,
 } from "lucide-react";
@@ -90,6 +91,11 @@ const navItems = [
     label: "Raporte",
     href: "/reports",
     icon: FileBarChart,
+  },
+  {
+    label: "Të Dyshimtat",
+    href: "/pending",
+    icon: AlertTriangle,
   },
 ];
 
