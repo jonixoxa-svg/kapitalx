@@ -17,13 +17,15 @@ import DocumentUpload from "./DocumentUpload";
 import PaymentsSection from "./PaymentsSection";
 import MilestonesSection from "./MilestonesSection";
 import ProjectSubcontractorsSection from "./ProjectSubcontractorsSection";
+import ProjectExtraWorksSection from "./ProjectExtraWorksSection";
 
-const TABS = ["overview", "milestones", "payments", "expenses", "workers", "subcontractors", "documents", "activity"] as const;
+const TABS = ["overview", "milestones", "extras", "payments", "expenses", "workers", "subcontractors", "documents", "activity"] as const;
 type Tab = typeof TABS[number];
 
 const TAB_LABELS: Record<Tab, string> = {
   overview: "Përmbledhje",
   milestones: "Fazat",
+  extras: "Punët Shtesë",
   payments: "Pagesat",
   expenses: "Shpenzime",
   workers: "Punëtorët",
@@ -505,19 +507,34 @@ export default function ProjectDetail({ project: initialProject, workers, userRo
         )}
 
         {/* Payments */}
-        {activeTab === "payments" && (
-          <PaymentsSection
-            projectId={project.id}
-            payments={project.payments || []}
-            contractValue={project.contractValue}
-            userRole={userRole}
-          />
-        )}
+        {activeTab === "payments" && (() => {
+          // Llogarit vleren efektive te kontrates (origjinale + punet shtese te aprovuara)
+          const approvedExtras = (project.extraWorks || []).filter((e: any) => e.status === "APPROVED");
+          const totalExtras = approvedExtras.reduce((s: number, e: any) => s + e.amount, 0);
+          const effectiveContract = project.contractValue + totalExtras;
+          return (
+            <PaymentsSection
+              projectId={project.id}
+              payments={project.payments || []}
+              contractValue={effectiveContract}
+              userRole={userRole}
+            />
+          );
+        })()}
 
         {/* Subcontractors */}
         {activeTab === "subcontractors" && (
           <ProjectSubcontractorsSection
             projectId={project.id}
+            userRole={userRole}
+          />
+        )}
+
+        {/* Punet Shtese */}
+        {activeTab === "extras" && (
+          <ProjectExtraWorksSection
+            projectId={project.id}
+            contractValue={project.contractValue}
             userRole={userRole}
           />
         )}

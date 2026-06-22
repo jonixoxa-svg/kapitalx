@@ -16,6 +16,7 @@ async function getDashboardData() {
         expenses: true,
         workerAssignments: { include: { worker: true } },
         payments: true,
+        extraWorks: { where: { status: "APPROVED" } },
       },
     }),
     prisma.worker.findMany(),
@@ -29,7 +30,11 @@ async function getDashboardData() {
   const completedProjects = projects.filter((p) => p.status === "COMPLETED").length;
   const plannedProjects = projects.filter((p) => p.status === "PLANNED").length;
 
-  const totalRevenue = projects.reduce((s, p) => s + p.contractValue, 0);
+  // Vlera totale e te ardhurave = kontrate origjinale + punet shtese te aprovuara
+  const totalRevenue = projects.reduce((s, p) => {
+    const extras = (p as any).extraWorks?.reduce((es: number, e: any) => es + e.amount, 0) || 0;
+    return s + p.contractValue + extras;
+  }, 0);
   const totalProjectExpenses = projects.reduce(
     (s, p) => s + p.expenses.reduce((es, e) => es + e.amount, 0),
     0
@@ -46,17 +51,19 @@ async function getDashboardData() {
   const totalWorkers = workers.length;
   const activeWorkers = workers.filter((w) => w.active).length;
 
-  // Llogarit borxhet nga klientet per cdo projekt aktiv
+  // Llogarit borxhet nga klientet per cdo projekt aktiv (perfshire punet shtese)
   const debts = projects
     .filter((p) => p.status !== "COMPLETED")
     .map((p) => {
       const paid = p.payments.reduce((s, pay) => s + pay.amount, 0);
-      const outstanding = Math.max(0, p.contractValue - paid);
+      const extras = (p as any).extraWorks?.reduce((es: number, e: any) => es + e.amount, 0) || 0;
+      const effectiveValue = p.contractValue + extras;
+      const outstanding = Math.max(0, effectiveValue - paid);
       return {
         projectId: p.id,
         projectName: p.name,
         client: p.client,
-        contractValue: p.contractValue,
+        contractValue: effectiveValue,
         paid,
         outstanding,
       };

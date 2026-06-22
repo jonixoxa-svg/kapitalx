@@ -22,6 +22,9 @@ async function getProject(id: string) {
       milestones: {
         orderBy: [{ order: "asc" }, { createdAt: "asc" }],
       },
+      extraWorks: {
+        orderBy: { agreedDate: "desc" },
+      },
       activityLogs: {
         include: { user: { select: { name: true } } },
         orderBy: { createdAt: "desc" },

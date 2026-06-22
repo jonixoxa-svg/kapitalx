@@ -131,6 +131,7 @@ model Project {
   generalExpenses  GeneralExpense[]
   stockMovements   StockMovement[]
   subcontractorAssignments SubcontractorAssignment[]
+  extraWorks       ProjectExtraWork[]
 }
 
 model Expense {
@@ -407,6 +408,26 @@ model CalendarNote {
   updatedAt DateTime @updatedAt
 
   @@index([date])
+}
+
+// ====== PUNET SHTESE NE PROJEKTE ======
+// Per puanet qe dalin gjate ekzekutimit dhe nuk ishin ne kontraten origjinale
+// Rritte vleren totale te projektit pa e prekur contractValue origjinal
+model ProjectExtraWork {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  amount      Float                       // Vlera e shtuar ne kontrate
+  agreedDate  DateTime @default(now())    // Data e dakordimit me klientin
+  approvedBy  String?                     // Kush e ka aprovuar (psh emri i klientit)
+  status      String   @default("APPROVED") // APPROVED, PENDING, REJECTED
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
 }
 
 // ====== SHPENZIMET E DYSHIMTA ======
